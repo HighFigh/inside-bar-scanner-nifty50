@@ -15,7 +15,6 @@ def detect_inside_bar_breakouts(df):
     if df is None or len(df) < 3:
         return df
 
-    # Initialize columns
     df["InsideBar"] = False
     df["LongBreakout"] = False
     df["ShortBreakout"] = False
@@ -27,22 +26,22 @@ def detect_inside_bar_breakouts(df):
     df["InsideRange"] = None
 
     for i in range(1, len(df)):
-        prev_high = float(df.iloc[i - 1]["High"])
-        prev_low = float(df.iloc[i - 1]["Low"])
-        curr_high = float(df.iloc[i]["High"])
-        curr_low = float(df.iloc[i]["Low"])
+        prev_high = float(df["High"].iloc[i - 1])
+        prev_low = float(df["Low"].iloc[i - 1])
+        curr_high = float(df["High"].iloc[i])
+        curr_low = float(df["Low"].iloc[i])
 
         if curr_high < prev_high and curr_low > prev_low:
             df.loc[df.index[i], "InsideBar"] = True
 
     for i in range(2, len(df)):
-        # ✅ safe scalar boolean access
-        if bool(df.iloc[i - 1]["InsideBar"]):
-            mother_high = float(df.iloc[i - 1]["High"])
-            mother_low = float(df.iloc[i - 1]["Low"])
-            close = float(df.iloc[i]["Close"])
-            high = float(df.iloc[i]["High"])
-            low = float(df.iloc[i]["Low"])
+        inside_bar = df["InsideBar"].iloc[i - 1]
+        if inside_bar:
+            mother_high = float(df["High"].iloc[i - 1])
+            mother_low = float(df["Low"].iloc[i - 1])
+            close = float(df["Close"].iloc[i])
+            high = float(df["High"].iloc[i])
+            low = float(df["Low"].iloc[i])
             inside_range = mother_high - mother_low
 
             df.loc[df.index[i], "MotherHigh"] = mother_high
