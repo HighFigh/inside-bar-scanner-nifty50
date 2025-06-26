@@ -36,7 +36,8 @@ def detect_inside_bar_breakouts(df):
             df.loc[df.index[i], "InsideBar"] = True
 
     for i in range(2, len(df)):
-        if df.iloc[i - 1]["InsideBar"] == True:
+        # ✅ safe scalar boolean access
+        if bool(df.iloc[i - 1]["InsideBar"]):
             mother_high = float(df.iloc[i - 1]["High"])
             mother_low = float(df.iloc[i - 1]["Low"])
             close = float(df.iloc[i]["Close"])
