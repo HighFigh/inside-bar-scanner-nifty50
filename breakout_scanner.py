@@ -15,26 +15,36 @@ def detect_inside_bar_breakouts(df):
     if df is None or len(df) < 3:
         return df
 
-    # Calculate Inside Bar condition
-    df["InsideBar"] = (df["High"] < df["High"].shift(1)) & (df["Low"] > df["Low"].shift(1))
-    df["MotherHigh"] = df["High"].shift(1)
-    df["MotherLow"] = df["Low"].shift(1)
+    # Step 1: Basic Calculations
+    df["Prev_High"] = df["High"].shift(1)
+    df["Prev_Low"] = df["Low"].shift(1)
+
+    # Step 2: Identify Inside Bar (current bar is within previous bar's range)
+    df["InsideBar"] = (df["High"] < df["Prev_High"]) & (df["Low"] > df["Prev_Low"])
+
+    # Step 3: Prepare mother bar levels
+    df["MotherHigh"] = df["Prev_High"]
+    df["MotherLow"] = df["Prev_Low"]
     df["InsideRange"] = df["MotherHigh"] - df["MotherLow"]
 
-    # Initialize columns
+    # Step 4: Safe Boolean flags
     df["LongBreakout"] = False
     df["ShortBreakout"] = False
 
-    # Avoid NaNs by filtering valid rows only
-    valid_rows = df["InsideBar"].shift(1).fillna(False) & df["MotherHigh"].notna() & df["MotherLow"].notna()
+    # Only evaluate breakout logic where previous candle was an inside bar
+    for i in range(2, len(df)):
+        if df.at[i-1, "InsideBar"]:
+            if df.at[i, "High"] > df.at[i-1, "Prev_High"]:
+                df.at[i, "LongBreakout"] = True
+            elif df.at[i, "Low"] < df.at[i-1, "Prev_Low"]:
+                df.at[i, "ShortBreakout"] = True
 
-    df.loc[valid_rows & (df["High"] > df["MotherHigh"]), "LongBreakout"] = True
-    df.loc[valid_rows & (df["Low"] < df["MotherLow"]), "ShortBreakout"] = True
-
+    # Step 5: Assign Positions
     df["Position"] = 0
     df.loc[df["LongBreakout"], "Position"] = 1
     df.loc[df["ShortBreakout"], "Position"] = -1
 
+    # Step 6: SL and Target
     df["SL"] = None
     df["Target"] = None
     df.loc[df["Position"] == 1, "SL"] = df["MotherLow"]
