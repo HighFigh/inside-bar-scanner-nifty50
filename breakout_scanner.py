@@ -27,36 +27,36 @@ def detect_inside_bar_breakouts(df):
     df["InsideRange"] = None
 
     for i in range(1, len(df)):
-        prev_high = float(df.at[df.index[i - 1], "High"])
-        prev_low = float(df.at[df.index[i - 1], "Low"])
-        curr_high = float(df.at[df.index[i], "High"])
-        curr_low = float(df.at[df.index[i], "Low"])
+        prev_high = float(df.iloc[i - 1]["High"])
+        prev_low = float(df.iloc[i - 1]["Low"])
+        curr_high = float(df.iloc[i]["High"])
+        curr_low = float(df.iloc[i]["Low"])
 
         if curr_high < prev_high and curr_low > prev_low:
-            df.at[df.index[i], "InsideBar"] = True
+            df.loc[df.index[i], "InsideBar"] = True
 
     for i in range(2, len(df)):
-        if df.at[df.index[i - 1], "InsideBar"]:  # ✅ FIXED HERE
-            mother_high = float(df.at[df.index[i - 1], "High"])
-            mother_low = float(df.at[df.index[i - 1], "Low"])
-            close = float(df.at[df.index[i], "Close"])
-            high = float(df.at[df.index[i], "High"])
-            low = float(df.at[df.index[i], "Low"])
+        if df.iloc[i - 1]["InsideBar"] == True:
+            mother_high = float(df.iloc[i - 1]["High"])
+            mother_low = float(df.iloc[i - 1]["Low"])
+            close = float(df.iloc[i]["Close"])
+            high = float(df.iloc[i]["High"])
+            low = float(df.iloc[i]["Low"])
             inside_range = mother_high - mother_low
 
-            df.at[df.index[i], "MotherHigh"] = mother_high
-            df.at[df.index[i], "MotherLow"] = mother_low
-            df.at[df.index[i], "InsideRange"] = inside_range
+            df.loc[df.index[i], "MotherHigh"] = mother_high
+            df.loc[df.index[i], "MotherLow"] = mother_low
+            df.loc[df.index[i], "InsideRange"] = inside_range
 
             if high > mother_high:
-                df.at[df.index[i], "LongBreakout"] = True
-                df.at[df.index[i], "Position"] = 1
-                df.at[df.index[i], "SL"] = mother_low
-                df.at[df.index[i], "Target"] = close + 2 * inside_range
+                df.loc[df.index[i], "LongBreakout"] = True
+                df.loc[df.index[i], "Position"] = 1
+                df.loc[df.index[i], "SL"] = mother_low
+                df.loc[df.index[i], "Target"] = close + 2 * inside_range
             elif low < mother_low:
-                df.at[df.index[i], "ShortBreakout"] = True
-                df.at[df.index[i], "Position"] = -1
-                df.at[df.index[i], "SL"] = mother_high
-                df.at[df.index[i], "Target"] = close - 2 * inside_range
+                df.loc[df.index[i], "ShortBreakout"] = True
+                df.loc[df.index[i], "Position"] = -1
+                df.loc[df.index[i], "SL"] = mother_high
+                df.loc[df.index[i], "Target"] = close - 2 * inside_range
 
     return df
