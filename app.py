@@ -1,38 +1,46 @@
 import streamlit as st
-from breakout_scanner import fetch_data, detect_inside_bar_breakouts
-from nifty50_list import get_nifty50_symbols
-import plotly.graph_objs as go
+import yfinance as yf
+import pandas as pd
+from datetime import datetime, timedelta
+from breakout_scanner import detect_inside_bar_breakouts
+from telegram_bot import send_alert
 
-st.set_page_config(layout="wide")
-st.title("📈 Inside Bar Breakout Scanner - Nifty 50")
+st.set_page_config(page_title="Inside Bar Breakout Scanner - Nifty 50", layout="wide")
+st.title("📈 Inside Bar Breakout Scanner - Nifty 50 (Daily Candle)")
 
-symbols = get_nifty50_symbols()
-selected_symbol = st.selectbox("Select a Stock from Nifty 50:", symbols)
-interval = st.selectbox("Interval", ["15m", "1d"])
-period = "5d" if interval == "15m" else "3mo"
+nifty50_list = [
+    "RELIANCE.NS", "SBIN.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
+    "ITC.NS", "LT.NS", "HCLTECH.NS", "ASIANPAINT.NS"
+]
 
-df = fetch_data(selected_symbol, interval=interval, period=period)
+symbol = st.selectbox("Select a Stock from Nifty 50:", nifty50_list)
+days = st.slider("Number of days to fetch", 10, 120, 30)
 
-# ✅ Safety check to prevent crashes if data is empty
-if df is None or df.empty:
-    st.error("⚠️ Failed to fetch data. Please try a different stock or check internet access.")
-    st.stop()
+if st.button("🔍 Scan Now"):
+    with st.spinner(f"Fetching data for {symbol}..."):
+        try:
+            df = yf.download(symbol, period=f"{days}d", interval="1d")
+            df = df[["Open", "High", "Low", "Close"]]
+            df.dropna(inplace=True)
+            df = detect_inside_bar_breakouts(df)
 
-df = detect_inside_bar_breakouts(df)
+            st.success("Scan complete.")
+            st.dataframe(df.tail(10))
 
-# Chart
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Close"))
+            # Detect last breakout
+            long_breakouts = df[df["LongBreakout"] == True]
+            short_breakouts = df[df["ShortBreakout"] == True]
 
-buys = df[df["Position"] == 1]
-sells = df[df["Position"] == -1]
+            if not long_breakouts.empty:
+                last = long_breakouts.iloc[-1]
+                msg = f"📈 <b>Long Breakout</b> detected on <b>{symbol}</b> at {last.name.strftime('%Y-%m-%d')} - Close: {last['Close']:.2f}"
+                send_alert(msg)
 
-fig.add_trace(go.Scatter(x=buys.index, y=buys["Close"], mode="markers", name="Buy", marker=dict(color="green", size=10, symbol="triangle-up")))
-fig.add_trace(go.Scatter(x=sells.index, y=sells["Close"], mode="markers", name="Sell", marker=dict(color="red", size=10, symbol="triangle-down")))
+            if not short_breakouts.empty:
+                last = short_breakouts.iloc[-1]
+                msg = f"📉 <b>Short Breakout</b> detected on <b>{symbol}</b> at {last.name.strftime('%Y-%m-%d')} - Close: {last['Close']:.2f}"
+                send_alert(msg)
 
-fig.update_layout(title=f"{selected_symbol} Inside Bar Breakouts", xaxis_title="Time", yaxis_title="Price")
-st.plotly_chart(fig, use_container_width=True)
-
-# Table
-st.subheader("Breakout Signals")
-st.dataframe(df[df["Position"] != 0][["Open", "High", "Low", "Close", "Position", "SL", "Target"]].sort_index(ascending=False))
+        except Exception as e:
+            st.error("⚠️ Failed to fetch or process data.")
+            st.exception(e)
