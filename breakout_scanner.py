@@ -15,7 +15,7 @@ def detect_inside_bar_breakouts(df):
     if df is None or len(df) < 3:
         return df
 
-    # Add necessary columns
+    # Initialize columns
     df["InsideBar"] = False
     df["LongBreakout"] = False
     df["ShortBreakout"] = False
@@ -26,50 +26,37 @@ def detect_inside_bar_breakouts(df):
     df["MotherLow"] = None
     df["InsideRange"] = None
 
-    # Cache column indexes for speed and accuracy
-    col_High = df.columns.get_loc("High")
-    col_Low = df.columns.get_loc("Low")
-    col_Close = df.columns.get_loc("Close")
-    col_InsideBar = df.columns.get_loc("InsideBar")
-    col_Long = df.columns.get_loc("LongBreakout")
-    col_Short = df.columns.get_loc("ShortBreakout")
-    col_Pos = df.columns.get_loc("Position")
-    col_SL = df.columns.get_loc("SL")
-    col_Target = df.columns.get_loc("Target")
-    col_MH = df.columns.get_loc("MotherHigh")
-    col_ML = df.columns.get_loc("MotherLow")
-    col_IR = df.columns.get_loc("InsideRange")
-
     for i in range(1, len(df)):
-        prev_high = df.iloc[i - 1, col_High]
-        prev_low = df.iloc[i - 1, col_Low]
-        curr_high = df.iloc[i, col_High]
-        curr_low = df.iloc[i, col_Low]
+        prev_high = float(df.loc[df.index[i - 1], "High"])
+        prev_low = float(df.loc[df.index[i - 1], "Low"])
+        curr_high = float(df.loc[df.index[i], "High"])
+        curr_low = float(df.loc[df.index[i], "Low"])
 
-        if float(curr_high) < float(prev_high) and float(curr_low) > float(prev_low):
-            df.iat[i, col_InsideBar] = True
+        if curr_high < prev_high and curr_low > prev_low:
+            df.loc[df.index[i], "InsideBar"] = True
 
     for i in range(2, len(df)):
-        if df.iat[i - 1, col_InsideBar]:
-            mother_high = df.iat[i - 1, col_High]
-            mother_low = df.iat[i - 1, col_Low]
-            close = df.iat[i, col_Close]
+        if df.loc[df.index[i - 1], "InsideBar"]:
+            mother_high = float(df.loc[df.index[i - 1], "High"])
+            mother_low = float(df.loc[df.index[i - 1], "Low"])
+            close = float(df.loc[df.index[i], "Close"])
+            high = float(df.loc[df.index[i], "High"])
+            low = float(df.loc[df.index[i], "Low"])
             inside_range = mother_high - mother_low
 
-            df.iat[i, col_MH] = mother_high
-            df.iat[i, col_ML] = mother_low
-            df.iat[i, col_IR] = inside_range
+            df.loc[df.index[i], "MotherHigh"] = mother_high
+            df.loc[df.index[i], "MotherLow"] = mother_low
+            df.loc[df.index[i], "InsideRange"] = inside_range
 
-            if df.iat[i, col_High] > mother_high:
-                df.iat[i, col_Long] = True
-                df.iat[i, col_Pos] = 1
-                df.iat[i, col_SL] = mother_low
-                df.iat[i, col_Target] = close + 2 * inside_range
-
-            elif df.iat[i, col_Low] < mother_low:
-                df.iat[i, col_Short] = True
-                df.iat[i, col_Pos] = -1
-                df.iat[i, col_SL] = mother_high
-                df.iat[i, col_Target] = close - 2 * inside_range
+            if high > mother_high:
+                df.loc[df.index[i], "LongBreakout"] = True
+                df.loc[df.index[i], "Position"] = 1
+                df.loc[df.index[i], "SL"] = mother_low
+                df.loc[df.index[i], "Target"] = close + 2 * inside_range
+            elif low < mother_low:
+                df.loc[df.index[i], "ShortBreakout"] = True
+                df.loc[df.index[i], "Position"] = -1
+                df.loc[df.index[i], "SL"] = mother_high
+                df.loc[df.index[i], "Target"] = close - 2 * inside_range
 
     return df
