@@ -6,10 +6,16 @@ def fetch_data(symbol, interval="15m", period="5d"):
         df = yf.download(symbol, interval=interval, period=period, progress=False)
         if df.empty:
             return None
-        return df.dropna()
+        df.dropna(inplace=True)
+
+        # Convert UTC to IST
+        df.index = df.index.tz_localize("UTC").tz_convert("Asia/Kolkata")
+
+        return df
     except Exception as e:
         print(f"Error fetching {symbol}: {e}")
         return None
+
 
 def detect_inside_bar_breakouts(df):
     if df is None or len(df) < 3:
