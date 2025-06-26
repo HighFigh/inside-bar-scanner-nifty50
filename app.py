@@ -12,6 +12,12 @@ interval = st.selectbox("Interval", ["15m", "1d"])
 period = "5d" if interval == "15m" else "3mo"
 
 df = fetch_data(selected_symbol, interval=interval, period=period)
+
+# ✅ Safety check to prevent crashes if data is empty
+if df is None or df.empty:
+    st.error("⚠️ Failed to fetch data. Please try a different stock or check internet access.")
+    st.stop()
+
 df = detect_inside_bar_breakouts(df)
 
 # Chart
@@ -27,6 +33,6 @@ fig.add_trace(go.Scatter(x=sells.index, y=sells["Close"], mode="markers", name="
 fig.update_layout(title=f"{selected_symbol} Inside Bar Breakouts", xaxis_title="Time", yaxis_title="Price")
 st.plotly_chart(fig, use_container_width=True)
 
-# Data Table
+# Table
 st.subheader("Breakout Signals")
 st.dataframe(df[df["Position"] != 0][["Open", "High", "Low", "Close", "Position", "SL", "Target"]].sort_index(ascending=False))
